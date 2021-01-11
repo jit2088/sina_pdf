@@ -1,0 +1,75 @@
+# -*- coding: utf-8 -*-
+import win32api
+import win32con
+import requests
+from bs4 import BeautifulSoup
+import webbrowser
+import tkinter
+from tkinter import filedialog
+import pdfkit
+# 预览
+def take_body():
+	global url
+	global body_class
+	global headers
+	url = var_url.get()
+	body_class = var_body.get()
+	# 请求URL
+	headers = {
+	"Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+	"Accept-Encoding":"gzip, deflate, br",
+	"User-Agent":"Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.146 Safari/537.36"
+	}
+	r = requests.get(url,headers = headers)
+	soup = BeautifulSoup(r.content,"html.parser")
+	# 提取标题
+	global title
+	title = soup.title.text
+	# 判断该网站是否已下载转换过
+	f = open("temp.txt","r")
+	a = f.read()
+	dict = eval(a)
+	f.close()
+	if url.split("/")[2] in dict:
+		body_class = dict[url.split("/")[2]]
+	elif body_class == "":
+		win32api.MessageBox(0, "未从在该网站下载过文档，添加提取条件", "提示", win32con.MB_OK)
+	# 提取正文
+	if body_class != "":
+		body = soup.find_all(class_= body_class)[0]
+	# 对提取的内容，调用浏览器进行预览
+		html_test = str(body)
+		with open("html_test.html","wb")as f:
+			f.write(html_test.encode("utf-8"))
+			webbrowser.open("E:PythonHtmlToPdfHtmlToPdf_V0.7html_test.html",new=0,autoraise=True)
+# html转pdf
+def htmltopdf():
+	file_name = title + ".pdf"
+	types = [("pdf文件", "*.pdf")]
+	dest_dir = filedialog.asksaveasfilename(initialfile = file_name,filetypes = types)
+	options = {"encoding": "utf-8"}
+	pdfkit.from_file("html_test.html", dest_dir, options=options)
+	dict = {}
+	f = open("temp.txt","r")
+	a = f.read()
+	dict = eval(a)
+	f.close()
+	dict[url.split("/")[2]] = body_class
+	f = open("temp.txt","w")
+	f.write(str(dict))
+	f.close()
+	# 创建窗口
+	root = tkinter.Tk()
+	root.title("HtmlToPdf")
+	root.geometry("300x200")
+	var_url = tkinter.StringVar()
+	var_body = tkinter.StringVar()
+	label_1 = tkinter.Label(root,text = "URL：").place(x=10,y=10)
+	text_1 = tkinter.Entry(root,textvariable = var_url).place(x=100,y=10)
+	label_2 = tkinter.Label(root,text = "输入提取条件：").place(x=10,y=55)
+	text_2 = tkinter.Entry(root,show = None,textvariable = var_body).place(x=100,y=55)
+	button_2 = tkinter.Button(root,text = "预览",command = take_body).place(x=250,y=50)
+	label_3 = tkinter.Label(root,text = "是否打印：").place(x=10,y=100)
+	button_3 = tkinter.Button(root,text = "是",command = htmltopdf).place(x=100,y=95)
+	button_3 = tkinter.Button(root,text = "否",command = root.quit).place(x=130,y=95)
+root.mainloop()
